@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Interferómetro de Michelson · De la regla al fotón</title>
+<link rel="stylesheet" href="css/applet.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>Interferómetro de Michelson <small>medir longitud contando franjas</small></h1>
+  <p class="lead">Mueve el espejo unos pocos nanómetros y observa el patrón de franjas. Cada franja que pasa por el centro es media longitud de onda de desplazamiento. Así se midió el metro antes del láser y así se medían las barras patrón.</p>
+  <div class="grid">
+    <div class="panel">
+      <canvas id="cv" width="640" height="360"></canvas>
+    </div>
+    <div class="panel">
+      <label>Desplazamiento del espejo <b id="dv">0 nm</b></label>
+      <input id="d" type="range" min="0" max="3000" step="1" value="0">
+      <label>Longitud de onda</label>
+      <div class="seg">
+        <button data-l="633" class="on" style="color:#ff6b6b">He-Ne 633 nm</button>
+        <button data-l="532" style="color:#7bd34a">Verde 532 nm</button>
+        <button data-l="450" style="color:#6aa8ff">Azul 450 nm</button>
+      </div>
+      <label>Luz detectada (fotones por cuadro) <b id="nv">2000</b></label>
+      <input id="n" type="range" min="1" max="4" step="0.01" value="3.3">
+      <div class="readout">
+        <div><span>Franjas contadas</span><strong id="fr">0</strong></div>
+        <div><span>Desplazamiento medido</span><strong id="dm">0 nm</strong></div>
+        <div><span>Error del conteo</span><strong id="er">—</strong></div>
+        <div><span>Resolución (λ/2)</span><strong id="rs">316 nm</strong></div>
+      </div>
+      <button id="reset" class="secondary">Reiniciar conteo</button>
+      <p class="note">Baja la luz detectada y verás que el patrón se vuelve granulado: es el ruido de disparo. Con pocos fotones cuesta decidir dónde está exactamente el máximo de la franja, y la medida pierde precisión.</p>
+    </div>
+  </div>
+  <footer>Universidad Tecnológica de Pereira · Cátedra “De la regla al fotón” · Uso educativo</footer>
+</div>
+<script>
+(function(){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  const dEl=document.getElementById('d'),nEl=document.getElementById('n');
+  let lambda=633,d=0,lastPhase=0,fringes=0,count=0;
+  const colors={633:[255,90,90],532:[120,230,90],450:[110,170,255]};
+  document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');lambda=+b.dataset.l;document.getElementById('rs').textContent=(lambda/2).toFixed(0)+' nm';reset();});
+  function reset(){fringes=0;count=0;lastPhase=2*d/lambda;update();}
+  document.getElementById('reset').onclick=reset;
+  dEl.oninput=()=>{d=+dEl.value;const ph=2*d/lambda;fringes+=Math.abs(Math.floor(ph)-Math.floor(lastPhase));lastPhase=ph;update();};
+  nEl.oninput=update;
+  function update(){
+    const N=Math.round(Math.pow(10,+nEl.value));
+    document.getElementById('dv').textContent=d+' nm';
+    document.getElementById('nv').textContent=N;
+    document.getElementById('fr').textContent=fringes;
+    const dm=fringes*lambda/2;
+    document.getElementById('dm').textContent=dm.toFixed(0)+' nm';
+    const err=Math.abs(dm-d);
+    document.getElementById('er').textContent=(fringes?'± '+err.toFixed(0)+' nm':'—');
+    draw(N);
+  }
+  function draw(N){
+    const W=cv.width,H=cv.height;ctx.fillStyle='#060a14';ctx.fillRect(0,0,W,H);
+    // esquema óptico
+    const ox=40,oy=H/2,bs=[200,oy],m1=[200,40],m2=[320,oy],det=[200,H-30];
+    ctx.lineWidth=2;ctx.strokeStyle='rgba(255,255,255,.25)';
+    const c=colors[lambda];ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},.8)`;
+    ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(bs[0],bs[1]);ctx.lineTo(m2[0]+d/100,oy);ctx.moveTo(bs[0],bs[1]);ctx.lineTo(m1[0],m1[1]);ctx.moveTo(bs[0],bs[1]);ctx.lineTo(det[0],det[1]);ctx.stroke();
+    ctx.fillStyle='#e8b84b';ctx.fillRect(ox-14,oy-10,14,20);
+    ctx.save();ctx.translate(bs[0],bs[1]);ctx.rotate(Math.PI/4);ctx.fillStyle='rgba(56,213,255,.6)';ctx.fillRect(-2,-28,4,56);ctx.restore();
+    ctx.fillStyle='#cfd6e6';ctx.fillRect(m1[0]-20,m1[1]-6,40,6);ctx.fillRect(m2[0]+d/100,oy-20,6,40);
+    ctx.fillStyle='#7bd34a';ctx.fillRect(det[0]-18,det[1],36,8);
+    ctx.fillStyle='#9aa5bf';ctx.font='11px system-ui';ctx.fillText('láser',ox-18,oy+28);ctx.fillText('espejo fijo',m1[0]-28,m1[1]-12);ctx.fillText('espejo móvil',m2[0]-30,oy+36);ctx.fillText('detector',det[0]-22,det[1]+22);ctx.fillText('divisor',bs[0]+12,bs[1]-30);
+    // patrón de franjas (anillos) con ruido de disparo
+    const cx=W-120,cy=H/2,R=110;
+    const img=ctx.createImageData(2*R,2*R);const data=img.data;
+    const phase0=4*Math.PI*d/lambda;
+    const scale=N/10000; // fotones esperados por píxel escala
+    for(let y=0;y<2*R;y++)for(let x=0;x<2*R;x++){
+      const dx=x-R,dy=y-R,r2=dx*dx+dy*dy;if(r2>R*R)continue;
+      const I=0.5*(1+Math.cos(phase0+r2/600));
+      const mean=I*Math.max(scale,0.0005)*40; // fotones
+      let v;
+      if(mean>30){v=mean+Math.sqrt(mean)*gauss();}else{v=poisson(mean);}
+      v=Math.min(1,v/Math.max(scale*40,0.02));
+      const i=4*(y*2*R+x);data[i]=c[0]*v;data[i+1]=c[1]*v;data[i+2]=c[2]*v;data[i+3]=255;
+    }
+    ctx.putImageData(img,cx-R,cy-R);
+    ctx.strokeStyle='rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke();
+    ctx.fillStyle='#9aa5bf';ctx.fillText('pantalla del detector',cx-50,cy+R+16);
+  }
+  function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+  function poisson(l){const L=Math.exp(-l);let k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;}
+  update();
+})();
+</script>
+</body>
+</html>

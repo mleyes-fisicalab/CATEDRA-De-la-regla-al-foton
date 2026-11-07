@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reto de 5 preguntas · De la regla al fotón</title>
+<link rel="stylesheet" href="css/applet.css">
+</head>
+<body>
+<div class="wrap" style="max-width:720px">
+  <h1>Reto de 5 preguntas <small>no es evaluación, es para pensar</small></h1>
+  <div class="bar"><i id="prog" style="width:0%"></i></div>
+  <div class="panel" id="q"></div>
+  <footer>Universidad Tecnológica de Pereira · Cátedra “De la regla al fotón” · Uso educativo</footer>
+</div>
+<script>
+(function(){
+  const Q=[
+   {p:'Un estudiante mide la misma mesa cinco veces y obtiene 120,1 · 120,0 · 120,2 · 120,1 · 120,0 cm. La mesa mide en realidad 118,0 cm. Sus medidas son…',o:['Precisas pero no exactas','Exactas pero no precisas','Exactas y precisas','Ni exactas ni precisas'],r:0,e:'Las medidas están muy juntas entre sí (precisión alta) pero lejos del valor real (exactitud baja): probablemente la cinta está mal calibrada. Precisión y exactitud son cosas distintas.'},
+   {p:'¿Por qué en 1983 se decidió definir el metro a partir de la velocidad de la luz y del segundo?',o:['Porque la luz es más fácil de ver que una barra','Porque el tiempo se mide con mucha más precisión que la longitud','Porque la barra de platino se perdió','Porque lo exigió la industria del láser'],r:1,e:'Con los relojes atómicos el segundo se reproducía a 1 parte en 10¹³; ninguna barra se acercaba a eso. Fijar c convierte toda medida de longitud en una medida de tiempo.'},
+   {p:'En el paraguas bajo la lluvia, si la intensidad de la lluvia se multiplica por 100, la fluctuación relativa del número de gotas…',o:['Se multiplica por 100','Se multiplica por 10','Se divide entre 10','No cambia'],r:2,e:'La desviación crece como √N (×10) pero el promedio crece ×100, así que la fluctuación relativa σ/N cae ×10. Es la ley 1/√N del ruido de disparo.'},
+   {p:'Desde el 20 de mayo de 2019, el kilogramo se define…',o:['Con un cilindro de platino-iridio guardado en París','Como la masa de un litro de agua a 4 °C','Fijando el valor de la constante de Planck','Como 1000 veces la masa de un gramo patrón'],r:2,e:'Ninguna unidad del SI depende ya de un objeto. El kilogramo se realiza con la balanza de Kibble, que relaciona masa con constantes cuánticas.'},
+   {p:'Un reloj óptico con incertidumbre de 1 parte en 10¹⁸ puede notar que lo subieron un centímetro. ¿Por qué?',o:['Porque el aire es más frío arriba','Porque el tiempo corre un poco más rápido donde la gravedad es menor','Porque vibra menos al estar más alto','Porque recibe menos luz'],r:1,e:'Es la dilatación gravitacional del tiempo, predicha por la relatividad general. A esa precisión, el reloj se convierte en un sensor de altura y de gravedad: metrología cuántica aplicada a la geodesia.'}
+  ];
+  let i=0,score=0;const el=document.getElementById('q');
+  function render(){
+    document.getElementById('prog').style.width=(i/Q.length*100)+'%';
+    if(i>=Q.length){el.innerHTML=`<p><strong>Resultado: ${score} de ${Q.length}.</strong></p><p class="note">${score>=4?'Ya estás pensando como metrólogo: distingues precisión de exactitud y sabes de dónde sale el límite cuántico.':score>=2?'Buen punto de partida. Vuelve a la línea de tiempo y al laboratorio virtual: ahí están las respuestas que faltaron.':'Todo lo que falló está en el micrositio. Empieza por la línea de tiempo de la medida y el applet de la lluvia.'}</p><button id="re">Repetir</button>`;document.getElementById('re').onclick=()=>{i=0;score=0;render();};return;}
+    const q=Q[i];el.innerHTML=`<p><strong>Pregunta ${i+1} de ${Q.length}</strong></p><p>${q.p}</p>`+q.o.map((o,k)=>`<button class="choice" data-k="${k}">${o}</button>`).join('')+`<p class="note" id="fb" style="display:none"></p><button id="next" style="display:none">Siguiente</button>`;
+    el.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{
+      const k=+b.dataset.k;el.querySelectorAll('.choice').forEach(x=>{x.disabled=true;if(+x.dataset.k===q.r)x.classList.add('right');});
+      if(k===q.r){score++;}else{b.classList.add('wrong');}
+      const fb=document.getElementById('fb');fb.style.display='block';fb.innerHTML=(k===q.r?'<span class="ok">Correcto.</span> ':'<span class="bad">No exactamente.</span> ')+q.e;
+      const nx=document.getElementById('next');nx.style.display='inline-block';nx.onclick=()=>{i++;render();};
+    });
+  }
+  render();
+})();
+</script>
+</body>
+</html>

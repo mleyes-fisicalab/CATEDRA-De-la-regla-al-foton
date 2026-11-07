@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ruido de disparo: lluvia sobre un paraguas · De la regla al fotón</title>
+<link rel="stylesheet" href="css/applet.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>Lluvia sobre un paraguas <small>el ruido de disparo</small></h1>
+  <p class="lead">Cada gota es un fotón que llega al detector. Aunque la lluvia sea “constante”, el número de gotas por segundo fluctúa: esa fluctuación es el ruido de disparo. Sube la intensidad y mira qué pasa con la fluctuación relativa.</p>
+  <div class="grid">
+    <div class="panel">
+      <canvas id="cv" width="640" height="440"></canvas>
+    </div>
+    <div class="panel">
+      <label>Intensidad de la lluvia (gotas por intervalo) <b id="rv">20</b></label>
+      <input id="r" type="range" min="0.3" max="3.3" step="0.01" value="1.3">
+      <div class="readout">
+        <div><span>Promedio N</span><strong id="mean">—</strong></div>
+        <div><span>Desviación σ</span><strong id="sd">—</strong></div>
+        <div><span>√N (teoría)</span><strong id="sq">—</strong></div>
+        <div><span>Fluctuación relativa σ/N</span><strong id="rel">—</strong></div>
+      </div>
+      <button id="reset" class="secondary">Reiniciar estadística</button>
+      <button id="toggle">Pausar</button>
+      <p class="note">Con 20 gotas por intervalo la fluctuación es del 22 %; con 2000 baja al 2 %. La desviación crece como √N, pero la fluctuación relativa cae como 1/√N: por eso los metrólogos quieren más fotones… hasta que el ruido cuántico pone el límite.</p>
+    </div>
+  </div>
+  <footer>Universidad Tecnológica de Pereira · Cátedra “De la regla al fotón” · Uso educativo</footer>
+</div>
+<script>
+(function(){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const rEl=document.getElementById('r');
+  let rate=20,drops=[],counts=[],acc=0,tInt=0,run=true;
+  const INTERVAL=600; // ms por intervalo de conteo
+  rEl.oninput=()=>{rate=Math.round(Math.pow(10,+rEl.value));document.getElementById('rv').textContent=rate;counts=[];acc=0;};
+  document.getElementById('reset').onclick=()=>{counts=[];acc=0;};
+  document.getElementById('toggle').onclick=e=>{run=!run;e.target.textContent=run?'Pausar':'Continuar';};
+  function poisson(l){if(l>50){return Math.max(0,Math.round(l+Math.sqrt(l)*gauss()));}const L=Math.exp(-l);let k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;}
+  function gauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+  let last=performance.now();
+  function frame(now){
+    const dt=Math.min(50,now-last);last=now;
+    if(run){
+      // gotas nuevas este cuadro (Poisson)
+      const n=poisson(rate*dt/INTERVAL);
+      for(let i=0;i<n;i++)drops.push({x:120+Math.random()*400,y:-5,v:4+Math.random()*2});
+      drops.forEach(d=>d.y+=d.v*dt/16);
+      const hit=drops.filter(d=>d.y>=umbY(d.x));
+      acc+=hit.length;drops=drops.filter(d=>d.y<umbY(d.x));
+      tInt+=dt;if(tInt>=INTERVAL){counts.push(acc);if(counts.length>40)counts.shift();acc=0;tInt=0;stats();}
+    }
+    draw();requestAnimationFrame(frame);
+  }
+  function umbY(x){const cx=320,r=200;const dx=x-cx;return 250-Math.sqrt(Math.max(0,r*r-dx*dx))*0.45;}
+  function stats(){
+    if(counts.length<3)return;const n=counts.length;const m=counts.reduce((a,b)=>a+b,0)/n;
+    const sd=Math.sqrt(counts.reduce((a,b)=>a+(b-m)*(b-m),0)/(n-1));
+    document.getElementById('mean').textContent=m.toFixed(1);
+    document.getElementById('sd').textContent=sd.toFixed(1);
+    document.getElementById('sq').textContent=Math.sqrt(m).toFixed(1);
+    document.getElementById('rel').textContent=m>0?(100*sd/m).toFixed(1)+' %':'—';
+  }
+  function draw(){
+    ctx.fillStyle='#060a14';ctx.fillRect(0,0,W,H);
+    // paraguas
+    ctx.beginPath();for(let x=120;x<=520;x+=4)ctx.lineTo(x,umbY(x));ctx.strokeStyle='#e8b84b';ctx.lineWidth=4;ctx.stroke();
+    ctx.strokeStyle='rgba(232,184,75,.5)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(320,250-90);ctx.lineTo(320,290);ctx.stroke();
+    ctx.fillStyle='#9aa5bf';ctx.font='11px system-ui';ctx.fillText('detector (paraguas)',262,300);
+    // gotas
+    ctx.fillStyle='#38d5ff';drops.forEach(d=>{ctx.fillRect(d.x,d.y,2,6);});
+    // histograma de conteos
+    const x0=40,y0=H-14,w=560,h=70;
+    ctx.fillStyle='rgba(255,255,255,.04)';ctx.fillRect(x0,y0-h,w,h);
+    if(counts.length){
+      const m=counts.reduce((a,b)=>a+b,0)/counts.length;const max=Math.max(m*1.8,1);
+      const bw=w/40;
+      counts.forEach((c,i)=>{const bh=Math.min(h,c/max*h);ctx.fillStyle='#3b86ff';ctx.fillRect(x0+i*bw+1,y0-bh,bw-2,bh);});
+      const ym=y0-m/max*h;ctx.strokeStyle='#e8b84b';ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(x0,ym);ctx.lineTo(x0+w,ym);ctx.stroke();
+      const s=Math.sqrt(m)/max*h;ctx.fillStyle='rgba(232,184,75,.15)';ctx.fillRect(x0,ym-s,w,2*s);ctx.setLineDash([]);
+      ctx.fillStyle='#9aa5bf';ctx.fillText('gotas por intervalo · banda = promedio ± √N',x0,y0-h-6);
+    }
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

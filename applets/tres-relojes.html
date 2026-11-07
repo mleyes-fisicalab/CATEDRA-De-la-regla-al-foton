@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tres relojes · De la regla al fotón</title>
+<link rel="stylesheet" href="css/applet.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>Tres relojes <small>péndulo, cuarzo y átomo</small></h1>
+  <p class="lead">Los tres arrancan sincronizados. Acelera el tiempo y observa cuánto se desfasa cada uno respecto al tiempo “verdadero”. La diferencia entre ellos es la historia del segundo.</p>
+  <div class="grid">
+    <div class="panel">
+      <canvas id="cv" width="640" height="340"></canvas>
+    </div>
+    <div class="panel">
+      <label>Velocidad del tiempo <b id="sv">1 día / s</b></label>
+      <input id="s" type="range" min="0" max="3" step="1" value="0">
+      <div class="readout">
+        <div><span>Tiempo transcurrido</span><strong id="el">0 d</strong></div>
+        <div><span>Error del péndulo</span><strong id="e1">0</strong></div>
+        <div><span>Error del cuarzo</span><strong id="e2">0</strong></div>
+        <div><span>Error del cesio</span><strong id="e3">0</strong></div>
+      </div>
+      <button id="reset" class="secondary">Reiniciar</button>
+      <button id="toggle">Pausar</button>
+      <p class="note">Órdenes de magnitud típicos: un buen péndulo pierde ~1 s al día (1 parte en 10⁵); un cuarzo ~1 s al mes (10⁻⁶); un reloj de cesio comercial ~1 s en 300 000 años (10⁻¹³). Un reloj óptico actual (10⁻¹⁸) no perdería un segundo en la edad del universo.</p>
+    </div>
+  </div>
+  <footer>Universidad Tecnológica de Pereira · Cátedra “De la regla al fotón” · Uso educativo</footer>
+</div>
+<script>
+(function(){
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const speeds=[1,7,30,365],names=['1 día / s','1 semana / s','1 mes / s','1 año / s'];
+  const clocks=[{n:'Péndulo',rate:1.2e-5,jit:3e-6,c:'#e8b84b'},{n:'Cuarzo',rate:4e-7,jit:5e-8,c:'#38d5ff'},{n:'Cesio',rate:1e-13,jit:1e-14,c:'#7bd34a'}];
+  let days=0,err=[0,0,0],sp=0,run=true,last=performance.now();
+  const sEl=document.getElementById('s');
+  sEl.oninput=()=>{sp=+sEl.value;document.getElementById('sv').textContent=names[sp];};
+  document.getElementById('reset').onclick=()=>{days=0;err=[0,0,0];};
+  document.getElementById('toggle').onclick=e=>{run=!run;e.target.textContent=run?'Pausar':'Continuar';};
+  function fmt(s){const a=Math.abs(s);let t;if(a<1e-6)t=(a*1e9).toFixed(1)+' ns';else if(a<1e-3)t=(a*1e6).toFixed(1)+' µs';else if(a<1)t=(a*1e3).toFixed(1)+' ms';else if(a<60)t=a.toFixed(1)+' s';else if(a<3600)t=(a/60).toFixed(1)+' min';else if(a<86400)t=(a/3600).toFixed(1)+' h';else t=(a/86400).toFixed(1)+' d';return (s<0?'−':'+')+t;}
+  function fmtD(d){if(d<30)return d.toFixed(1)+' d';if(d<365)return (d/30.4).toFixed(1)+' meses';return (d/365).toFixed(1)+' años';}
+  function frame(now){
+    const dt=Math.min(0.1,(now-last)/1000);last=now;
+    if(run){const dd=dt*speeds[sp];days+=dd;const secs=dd*86400;clocks.forEach((c,i)=>{err[i]+=secs*(c.rate+c.jit*(Math.random()*2-1));});}
+    document.getElementById('el').textContent=fmtD(days);
+    ['e1','e2','e3'].forEach((id,i)=>document.getElementById(id).textContent=fmt(err[i]));
+    draw();requestAnimationFrame(frame);
+  }
+  function draw(){
+    ctx.fillStyle='#060a14';ctx.fillRect(0,0,W,H);
+    const t=performance.now()/1000;
+    clocks.forEach((c,i)=>{
+      const cx=110+i*210,cy=120,R=70;
+      ctx.strokeStyle='rgba(255,255,255,.2)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke();
+      for(let k=0;k<12;k++){const a=k/12*2*Math.PI;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(R-6),cy+Math.sin(a)*(R-6));ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();}
+      // manecilla verdadera (blanca) y manecilla del reloj (color) con error exagerado visualmente
+      const a0=(t%60)/60*2*Math.PI-Math.PI/2;
+      const vis=Math.min(Math.PI,Math.log10(1+Math.abs(err[i]))*0.6)*Math.sign(err[i]);
+      ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a0)*(R-14),cy+Math.sin(a0)*(R-14));ctx.stroke();
+      ctx.strokeStyle=c.c;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a0+vis)*(R-14),cy+Math.sin(a0+vis)*(R-14));ctx.stroke();
+      ctx.fillStyle=c.c;ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText(c.n,cx,cy+R+20);
+      ctx.fillStyle='#9aa5bf';ctx.font='11px system-ui';ctx.fillText('1 parte en 10'+sup(Math.round(-Math.log10(c.rate))),cx,cy+R+36);
+      ctx.fillText('error: '+fmt(err[i]),cx,cy+R+52);
+      // oscilador ilustrativo
+      const oy=cy+R+80;ctx.strokeStyle=c.c;ctx.lineWidth=2;ctx.beginPath();
+      const f=[0.8,6,40][i];for(let x=-60;x<=60;x++){const y=Math.sin((x/60)*f*Math.PI+t*(i+1)*2)*8;x===-60?ctx.moveTo(cx+x,oy+y):ctx.lineTo(cx+x,oy+y);}ctx.stroke();
+      ctx.textAlign='left';
+    });
+    ctx.fillStyle='#9aa5bf';ctx.font='11px system-ui';ctx.fillText('manecilla blanca = tiempo verdadero · manecilla de color = lo que marca el reloj (desfase exagerado para verlo)',40,H-10);
+  }
+  function sup(n){const m={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};return String(n).split('').map(c=>m[c]).join('');}
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
