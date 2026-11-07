@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>De la metrología básica a la metrología cuántica: De la regla al fotón — Cuaderno interactivo</title>
+<meta name="description" content="Cuaderno interactivo de la cátedra 'De la regla al fotón': metrología básica, interferometría, ruido de disparo y metrología cuántica, con simuladores visuales y la Hoja de Ruta de la Precisión.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400;1,600&family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script>
+  window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] }, svg: { fontCache: 'global' } };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+
+<!-- ===================== PORTADA ===================== -->
+<section id="cover">
+  <div class="cover-img">
+    <img src="img/portada.png" alt="Portada: De la metrología básica a la metrología cuántica — De la regla al fotón">
+  </div>
+  <div class="cover-text">
+    <div class="kicker">Cuaderno interactivo · Cátedra de 4 horas</div>
+    <h1>De la metrología básica a la metrología cuántica<br><span>De la regla al fotón</span></h1>
+    <p class="subtitle">Un viaje en cinco estaciones: del trozo de metal guardado en París a la frecuencia de los átomos. Sin tableros llenos de ecuaciones: simulaciones, analogías cotidianas y una Hoja de Ruta de la Precisión para llevarse a casa.</p>
+    <div class="meta">
+      Universidad Tecnológica de Pereira · Facultad de Ciencias Básicas<br>
+      Grupo de Investigación en Metrología Bioeléctrica — Procesos de Apropiación Social del Conocimiento
+    </div>
+    <div class="cover-actions">
+      <button class="btn primary" id="btn-start">Comenzar el viaje →</button>
+      <button class="btn" id="btn-continue" style="display:none">Continuar donde iba</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CUADERNO ===================== -->
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand" id="brand">
+      <img src="img/portada.png" alt="">
+      <div>
+        <h2>De la regla al fotón</h2>
+        <small>metrología básica → cuántica</small>
+      </div>
+    </div>
+    <nav id="toc"></nav>
+  </aside>
+
+  <main id="main">
+    <div id="topbar">
+      <button class="btn small" id="menu-btn">☰ Índice</button>
+      <button class="btn small" id="btn-cover">Portada</button>
+      <div class="progress"><div id="progress-bar"></div></div>
+      <span class="page-indicator" id="page-indicator"></span>
+      <button class="btn small" id="theme-btn" title="Cambiar tema">🌙</button>
+    </div>
+    <article id="page"></article>
+    <div id="pager">
+      <button class="btn" id="prev-btn">← Anterior</button>
+      <button class="btn primary" id="next-btn">Siguiente →</button>
+    </div>
+    <footer class="credits">
+      Universidad Tecnológica de Pereira · Cuaderno interactivo "De la regla al fotón" · Uso educativo
+    </footer>
+  </main>
+</div>
+
+<script src="js/sims.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
